@@ -18,7 +18,7 @@ class Student
   class Student
   {
     [Key]//必须定义主键(可以标记多个形成组合键)
-    public virtual int Id{get;set;}
+    public int Id{get;set;}
     public virtual string Name{get;set;}//属性必须virtual才能被托管
   }
 ```
