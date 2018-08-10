@@ -1,1 +1,24 @@
 # SmartDb
+
+一直希望能够在服务器上只关心业务逻辑, 不用写SQL的增删改查. 对数据库中的数据, 只要我读取出来就可以只操作内存中的结构就可以了, 多么美好. 不想去关心数据修改之后要如何保存. 于是我封装了这个类库.
+
+只需要:
+<code>  
+  
+  var razor = new Razor();  
+  
+  razor.StartWork();      
+  
+  var personset = razor.CreateDbSet<Person>();  
+  
+  //...
+  
+  razor.StopWork();
+  
+</code>
+
+之后我就可以像使用list一样操作personset进行add/remove, 然后添加进set中的person实例也不需要担心其中属性的修改. 一切都会被托管持久化到数据库中.
+
+如同无须调用EF的DbContext.SaveChange()就能save changes一样简单.
+
+详见工程内Test目录
