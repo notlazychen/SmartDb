@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace SmartDb
+namespace SmartDb.Sample
 {
     public class DbContext
     {

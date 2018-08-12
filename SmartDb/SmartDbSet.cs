@@ -5,10 +5,15 @@ using System.Text;
 
 namespace SmartDb
 {
-    public class SmartDbSet<T> : IEnumerable<T>
+    interface ISmartable
+    {
+        
+    }
+
+    public class SmartDbSet<T> : IEnumerable<T>, ISmartable
          where T : class, new()
     {
-        private readonly List<T> _data = new List<T>();
+        protected readonly List<T> _data = new List<T>();
 
         public int Count => _data.Count;
 
@@ -16,15 +21,6 @@ namespace SmartDb
         //{
         //    return _data.Contains(item);
         //}
-        
-        public IEnumerator<T> GetEnumerator()
-        {
-            return _data.GetEnumerator();
-        }
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return _data.GetEnumerator();
-        }
 
         /// <summary>
         /// 增
@@ -78,6 +74,16 @@ namespace SmartDb
         private void WriteToDb(T item, DbActionType type)
         {
             SmartDbBus.PlanToWriteToDb(item, type);
+        }
+
+        public IEnumerator<T> GetEnumerator()
+        {
+            return _data.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return _data.GetEnumerator();
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using MySql.Data.MySqlClient;
+﻿using Dapper;
+using MySql.Data.MySqlClient;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -16,7 +17,8 @@ namespace SmartDb
     public class Razor :IDisposable
     {
         private string _connstr;
-        private IDbConnection _conn;
+        private IDbConnection _connWriter;
+        private IDbConnection _connReader;
         /// <summary>
         /// 合并写入最大行数
         /// </summary>
@@ -31,11 +33,11 @@ namespace SmartDb
         /// </summary>
         public event EventHandler<Exception> UnHandledSqlCommandExecuteException;
 
-        public Razor(string connStr, int maxlines = 100)
+        public Razor(string connStr, int maxlines = 1000)
         {
             _connstr = connStr;
-            _conn = new MySqlConnection(connStr);
-            _conn.Open();
+            _connWriter = new MySqlConnection(connStr);
+            _connWriter.Open();
             MaxLines = maxlines;
         }
 
@@ -64,7 +66,7 @@ namespace SmartDb
 
                 IDbTransaction trx = null;
 
-                bool isopend = _conn.State == ConnectionState.Open;
+                bool isopend = _connWriter.State == ConnectionState.Open;
                 int retrytimes = 0;//重试十次
                 do
                 {
@@ -72,17 +74,21 @@ namespace SmartDb
                     {
                         if (!isopend)
                         {
-                            _conn.Open(); //数据库连接打开
+                            _connWriter.Open(); //数据库连接打开
                         }
-                        trx = _conn.BeginTransaction();
+                        trx = _connWriter.BeginTransaction();
                         isopend = true;
                     }
                     catch (MySqlException ex)
                     {
+                        if (_connWriter != null)
+                        {
+                            _connWriter.Dispose();//数据库连接关闭
+                        }
                         //if (ex.Message.Contains("Fatal error encountered during command execution."))
                         //{
                         //}
-                        _conn = new MySqlConnection(_connstr);
+                        _connWriter = new MySqlConnection(_connstr);
                         retrytimes++;
                         Thread.Sleep(500 * retrytimes);
                     }
@@ -97,7 +103,7 @@ namespace SmartDb
 
                 try
                 {
-                    var cmd = _conn.CreateCommand();
+                    var cmd = _connWriter.CreateCommand();
                     cmd.Transaction = trx;
                     cmd.CommandText = sb.ToString();
                     cmd.ExecuteNonQuery();
@@ -111,10 +117,6 @@ namespace SmartDb
                 finally
                 {
                     trx.Dispose();
-                }
-                if (isopend)
-                {
-                    _conn.Close();//数据库连接关闭
                 }
 
                 _watch.Stop();
@@ -160,6 +162,41 @@ namespace SmartDb
             {
                 _loopToken.Cancel();
             }
+        }
+
+        public SmartDbSet<T> QueryDbSet<T>(string sql, object param = null)
+            where T : class, new()
+        {
+            int retrynumb = 0;
+            Exception e = null;
+            do
+            {
+                try
+                {
+                    if (_connReader == null)
+                    {
+                        _connReader = new MySqlConnection(this._connstr);
+                        _connReader.Open();
+                    }
+                    var bs = _connReader.Query<T>(sql, param);
+                    return this.CreateDbSet(bs);
+                }
+                catch(Exception ex)
+                {
+                    e = ex;
+                    if(_connReader != null)
+                    {
+                        _connReader.Dispose();
+                    }
+                    _connReader = null;
+                    retrynumb++;
+                }
+            } while (retrynumb<10);
+            if(retrynumb >= 10)
+            {
+                this.UnHandledSqlCommandExecuteException?.Invoke(this, e);
+            }
+            return null;
         }
 
         public SmartDbSet<T> CreateDbSet<T>(IEnumerable<T> set)

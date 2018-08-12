@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
 
-namespace SmartDb
+namespace SmartDb.Sample
 {
     /// <summary>
     /// 一个基础实体必须满足一下条件:

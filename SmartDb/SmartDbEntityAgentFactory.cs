@@ -31,7 +31,7 @@ namespace SmartDb
 
                 InjectInterceptor<T>(typeBuilder);
 
-                t = typeBuilder.CreateType();
+                t = typeBuilder.CreateTypeInfo();
                 _agentTypeMap.Add(type, t);
             }
 
@@ -58,7 +58,7 @@ namespace SmartDb
 
                 InjectInterceptor<T>(typeBuilder);
 
-                t = typeBuilder.CreateType();
+                t = typeBuilder.CreateTypeInfo();
                 _agentTypeMap.Add(type, t);
             }
             T obj = Activator.CreateInstance(t) as T;
