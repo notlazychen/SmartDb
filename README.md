@@ -32,6 +32,7 @@ class Student
   var student = personset.Add(new Student{Id = 1, Name="xxx"});
   student.Name = "xxx2";
   //...  
+  //do sth...
   
   razor.StopWork();
 ```
