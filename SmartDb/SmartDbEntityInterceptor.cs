@@ -35,6 +35,24 @@ namespace SmartDb
                     dic.Add($"set_{propertyName}", new DbFieldInfo { FieldInfo = f, PropertyName = propertyName });
                 }
                 _fields.Add(type, dic);
+
+                var curt = type.BaseType.BaseType;
+                while (curt != typeof(object))
+                {
+                    fields = curt.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                    foreach (var f in fields)
+                    {
+                        int last = f.Name.IndexOf('>');
+                        if (last <= 0)
+                        {
+                            continue;
+                        }
+                        string propertyName = f.Name.Substring(1, last - 1);
+                        dic.Add($"set_{propertyName}", new DbFieldInfo { FieldInfo = f, PropertyName = propertyName });
+                    }
+                    //_fields.Add(type, dic);
+                    curt = curt.BaseType;
+                }
             }
             var field = dic[@method];
             field.FieldInfo.SetValue(@object, parameter[0]); 

@@ -11,9 +11,12 @@ namespace SmartDb.Sample
         public static Razor razor;
         public static void Main()
         {
+            var date = TimeSpan.FromDays(3);
+            string str = date.ToString(@"hh\:mm\:ss");
             //string connstr = "Server=localhost;database=test;uid=root;pwd=root;SslMode=None;charset=utf8;pooling=false";
             string connstr = "Server=140.143.28.95;database=db-test;uid=chenrong;pwd=abcd1234;SslMode=None;charset=utf8;pooling=false";
             razor = new Razor(connstr, 2000);
+            //razor.Preload("XX.Domain");
             razor.SqlCommandExecuted += Razor_SqlCommandExecuted;
             razor.UnHandledSqlCommandExecuteException += Razor_UnHandledSqlCommandExecuteException;
             razor.StartWork();
@@ -33,13 +36,32 @@ namespace SmartDb.Sample
                     Name = $"s{i}",
                     Age = i,
                     SchoolId = "0002",
+                    Addresses = new List<Address>
+                    {
+                        new Address
+                        {
+                            Code = i,
+                            Title = $"add{i}"
+                        }
+                    },
+                    //Birthday = DateTime.Now
                 };
-                dbset.Add(s);//将数据放入容器进行托管, 测试是否插入保存到数据库
+                dbset.Insert(ref s);//将数据放入容器进行托管, 测试是否插入保存到数据库
             }
 
             foreach (var s in dbset)
             {
                 s.Name = $"upda{s.Name}";//测试托管数据属性修改能否自动保存到数据库中
+                List<Address> obj = s.Addresses;
+                obj.Add(
+                    new Address
+                    {
+                        Code = s.Age,
+                        Title = $"uuu{s.Name}"
+                    });
+                s.Addresses = obj;
+                s.Birthday = DateTime.Now.AddDays(-1);
+                s.Gender = (Gender)(s.Age % 2);
             }
             //dbset.Clear();//清空数据, 测试是否清空数据库
             Console.WriteLine($"{DateTime.Now}: OVER");

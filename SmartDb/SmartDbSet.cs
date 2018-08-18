@@ -22,15 +22,33 @@ namespace SmartDb
         //    return _data.Contains(item);
         //}
 
+        public T this[int index]
+        {
+            get { return _data[index]; }
+        }
+
         /// <summary>
         /// 增
         /// </summary>
-        public T Add(T item)
+        public T Insert(ref T item)
         {
             T agent = SmartDbEntityAgentFactory.Of(item);
             _data.Add(agent);
             //记录到案
             this.WriteToDb(agent, DbActionType.Insert);
+            item = agent;
+            return agent;
+        }
+
+        /// <summary>
+        /// 仅仅添加到缓存
+        /// </summary>
+        /// <param name="item"></param>
+        /// <returns></returns>
+        public T AddCache(T item)
+        {
+            T agent = SmartDbEntityAgentFactory.Of(item);
+            _data.Add(agent);
             return agent;
         }
 
@@ -50,7 +68,7 @@ namespace SmartDb
         /// <summary>
         /// 删
         /// </summary>
-        public bool Remove(T item)
+        public bool Delete(T item)
         {
             bool result = _data.Remove(item);
 
@@ -62,12 +80,30 @@ namespace SmartDb
             return result;
         }
 
-        internal SmartDbSet(IEnumerable<T> data)
+        /// <summary>
+        /// 仅仅从缓存中移除
+        /// </summary>
+        /// <param name="item"></param>
+        /// <returns></returns>
+        public bool RemoveCache(T item)
         {
-            foreach(var item in data)
+            bool result = _data.Remove(item);
+            return result;
+        }
+
+        public SmartDbSet()
+        {
+        }
+
+        public SmartDbSet(IEnumerable<T> data)
+        {
+            if (data != null)
             {
-                T agent = SmartDbEntityAgentFactory.Of(item);
-                _data.Add(agent);
+                foreach (var item in data)
+                {
+                    T agent = SmartDbEntityAgentFactory.Of(item);
+                    _data.Add(agent);
+                }
             }
         }
 

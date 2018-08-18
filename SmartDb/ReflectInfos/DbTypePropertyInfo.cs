@@ -8,13 +8,6 @@ namespace SmartDb
     public class DbTypePropertyInfo
     {
         public PropertyInfo PropertyInfo { get; set; }
-        public bool IsKey { get; set; }
-
-        //public string ParameterName { get; set; }
-        //public MySqlDbType SqlDbType { get; set; }
-        public object GetValue(object obj)
-        {
-            return PropertyInfo.GetValue(obj);
-        }
+        public bool IsKey { get; set; }        
     }
 }

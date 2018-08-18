@@ -14,9 +14,24 @@ namespace SmartDb.Sample
     public class Student
     {
         [Key]
-        public virtual string Id { get; set; }
+        public string Id { get; set; }
         public virtual string SchoolId { get; set; }
         public virtual string Name { get; set; }
         public virtual int Age { get; set; }
+        public virtual JsonObj<List<Address>> Addresses { get; set; }
+        public virtual DateTime Birthday { get; set; }
+        public virtual Gender Gender { get; set; }
+    }
+
+    public enum Gender
+    {
+        Man,
+        Woman
+    }
+
+    public class Address
+    {
+        public string Title { get; set; }
+        public int Code { get; set; }
     }
 }

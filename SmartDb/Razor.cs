@@ -27,7 +27,9 @@ namespace SmartDb
         private Stopwatch _watch = new Stopwatch();
 
         public delegate void SqlCommandExecutedDelegate(int exeLines, long exeMs, int remainLines);
+        public delegate void SqlCommandExecutingDelegate(string sql);
         public event SqlCommandExecutedDelegate SqlCommandExecuted;
+        public event SqlCommandExecutingDelegate SqlCommandExecuting;
         /// <summary>
         /// 抓住此事件时请宕机!
         /// </summary>
@@ -84,6 +86,10 @@ namespace SmartDb
                         if (_connWriter != null)
                         {
                             _connWriter.Dispose();//数据库连接关闭
+                            if(trx != null)
+                            {
+                                trx.Dispose();
+                            }
                         }
                         //if (ex.Message.Contains("Fatal error encountered during command execution."))
                         //{
@@ -105,7 +111,9 @@ namespace SmartDb
                 {
                     var cmd = _connWriter.CreateCommand();
                     cmd.Transaction = trx;
-                    cmd.CommandText = sb.ToString();
+                    string sql = sb.ToString();
+                    cmd.CommandText = sql;
+                    SqlCommandExecuting?.Invoke(sql);
                     cmd.ExecuteNonQuery();
                     trx.Commit();
                 }
@@ -139,10 +147,12 @@ namespace SmartDb
                 {
                     try
                     {
-                        if (!Execute())
+                        bool has = false;
+                        do
                         {
-                            Thread.Sleep(1);
-                        }
+                            has = Execute();
+                        } while (has);
+                        Thread.Sleep(1);
                     }
                     catch (Exception ex)
                     {
@@ -162,6 +172,44 @@ namespace SmartDb
             {
                 _loopToken.Cancel();
             }
+        }
+
+        public T QueryDbEntity<T>(string sql, object param = null)
+            where T : class, new()
+        {
+            int retrynumb = 0;
+            Exception e = null;
+            do
+            {
+                try
+                {
+                    if (_connReader == null)
+                    {
+                        _connReader = new MySqlConnection(this._connstr);
+                        _connReader.Open();
+                    }
+                    var entity = _connReader.QueryFirstOrDefault<T>(sql, param);
+                    if (entity == null)
+                        return null;
+                    T agent = SmartDbEntityAgentFactory.Of(entity);
+                    return agent;
+                }
+                catch (Exception ex)
+                {
+                    e = ex;
+                    if (_connReader != null)
+                    {
+                        _connReader.Dispose();
+                    }
+                    _connReader = null;
+                    retrynumb++;
+                }
+            } while (retrynumb < 10);
+            if (retrynumb >= 10)
+            {
+                this.UnHandledSqlCommandExecuteException?.Invoke(this, e);
+            }
+            return null;
         }
 
         public SmartDbSet<T> QueryDbSet<T>(string sql, object param = null)
@@ -212,10 +260,13 @@ namespace SmartDb
             return this.CreateDbSet(new List<T>());
         }
 
-        public T CreateDbEntity<T>() where T : class, new()
-        {
-            return SmartDbEntityAgentFactory.Of<T>();
-        }
+
+
+        //public T CreateDbEntity<T>() 
+        //    where T : class, new()
+        //{
+        //    return SmartDbEntityAgentFactory.Of<T>();
+        //}
 
         protected virtual void OnProcessing(int lines, long elapsedMilliseconds)
         {
@@ -225,6 +276,35 @@ namespace SmartDb
         public void Dispose()
         {
             this.StopWork();
+
+            if(_connReader != null)
+            {
+                _connReader.Dispose();
+            }
+            if(_connWriter != null)
+            {
+                _connWriter.Dispose();
+            }
+        }
+        
+
+        public void Preload(string assemblyName)
+        {
+            SmartDbBus.PreLoad(assemblyName);
+        }
+
+        public void InsertInToDb<T>(ref T item)
+            where T : class, new()
+        {
+            item = SmartDbEntityAgentFactory.Of(item);
+            SmartDbBus.PlanToWriteToDb(item, DbActionType.Insert);
+            //return item;
+        }
+
+        public void DeleteFromDb<T>(T item)
+            where T : class, new()
+        {
+            SmartDbBus.PlanToWriteToDb(item, DbActionType.Delete);
         }
     }
 

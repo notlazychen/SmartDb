@@ -11,9 +11,8 @@ namespace SmartDb
     {
         private static Dictionary<Type, Type> _agentTypeMap = new Dictionary<Type, Type>();
 
-        public static T Of<T>() where T : class, new()
+        public static Type OfType(Type type)
         {
-            var type = typeof(T);
             if (!_agentTypeMap.TryGetValue(type, out var t))
             {
                 string nameOfAssembly = type.Name + "ProxyAssembly";
@@ -29,57 +28,66 @@ namespace SmartDb
                 var typeBuilder = moduleBuilder.DefineType(
                   nameOfType, TypeAttributes.Public, type);
 
-                InjectInterceptor<T>(typeBuilder);
+                InjectInterceptor(type, typeBuilder);
 
                 t = typeBuilder.CreateTypeInfo();
                 _agentTypeMap.Add(type, t);
             }
+            return t;
+        }
 
+        public static T Of<T>() where T : class, new()
+        {
+            var type = typeof(T);
+            var t = OfType(type);
             return Activator.CreateInstance(t) as T;
         }
 
         public static T Of<T>(T org) where T : class, new()
         {
             var type = typeof(T);
-            if(!_agentTypeMap.TryGetValue(type, out var t))
+            if (type.Name.EndsWith("Proxy"))
             {
-                string nameOfAssembly = type.Name + "ProxyAssembly";
-                string nameOfModule = type.Name + "ProxyModule";
-                string nameOfType = type.Name + "Proxy";
-
-                var assemblyName = new AssemblyName(nameOfAssembly);
-
-                var assembly = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
-                //var assembly = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
-                var moduleBuilder = assembly.DefineDynamicModule(nameOfModule);
-
-                var typeBuilder = moduleBuilder.DefineType(
-                  nameOfType, TypeAttributes.Public, type);
-
-                InjectInterceptor<T>(typeBuilder);
-
-                t = typeBuilder.CreateTypeInfo();
-                _agentTypeMap.Add(type, t);
+                throw new Exception("不能托管已是托管的类型");
             }
+            var t = OfType(type);
             T obj = Activator.CreateInstance(t) as T;
 
             //赋初值
             IEnumerable<FieldInfo> fields = type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
             foreach (var f in fields)
             {
-                int last = f.Name.IndexOf('>');
-                if (last <= 0)
-                {
-                    continue;
-                }
-                string propertyName = f.Name.Substring(1, last - 1);
+                //包含那些不需要托管的字段
+                //int last = f.Name.IndexOf('>');
+                //if (last <= 0)
+                //{
+                //    continue;
+                //}
+                //string propertyName = f.Name.Substring(1, last - 1);
                 f.SetValue(obj, f.GetValue(org));
+            }
+            var curt = type.BaseType;
+            while (curt != typeof(object))//那些继承的值
+            {
+                fields = curt.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                foreach (var f in fields)
+                {
+                    //包含那些不需要托管的字段
+                    //int last = f.Name.IndexOf('>');
+                    //if (last <= 0)
+                    //{
+                    //    continue;
+                    //}
+                    //string propertyName = f.Name.Substring(1, last - 1);
+                    f.SetValue(obj, f.GetValue(org));
+                }
+                curt = curt.BaseType;
             }
 
             return obj;
         }
 
-        private static void InjectInterceptor<T>(TypeBuilder typeBuilder)
+        private static void InjectInterceptor(Type t, TypeBuilder typeBuilder)
         {
             // ---- define fields ----
             var interceptorType = typeof(SmartDbEntityInterceptor);
@@ -93,7 +101,7 @@ namespace SmartDb
             var ilOfCtor = constructorBuilder.GetILGenerator();
 
             ilOfCtor.Emit(OpCodes.Ldarg_0);
-            ilOfCtor.Emit(OpCodes.Call, typeof(T).GetConstructor(new Type[0]));
+            ilOfCtor.Emit(OpCodes.Call, t.GetConstructor(new Type[0]));
             ilOfCtor.Emit(OpCodes.Nop);
             //ilOfCtor.Emit(OpCodes.Newobj, interceptorType.GetConstructor(new Type[0]));
             //ilOfCtor.Emit(OpCodes.Stfld, fieldInterceptor);
@@ -102,7 +110,7 @@ namespace SmartDb
             // ---- define methods ----
 
             //获取属性Set方法
-            IEnumerable<MethodInfo> methodsOfType = typeof(T).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.SetProperty | BindingFlags.NonPublic);
+            IEnumerable<MethodInfo> methodsOfType = t.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.SetProperty | BindingFlags.NonPublic);
             methodsOfType = methodsOfType.Where(m => m.Attributes.HasFlag(MethodAttributes.HideBySig | MethodAttributes.SpecialName) && m.Name.StartsWith("set_"));
 
             foreach (var method in methodsOfType)
