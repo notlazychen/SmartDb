@@ -37,8 +37,8 @@ class Student
   razor.StopWork();//结束写入线程
 ```
 
-之后我就可以像使用list一样操作personset进行add/remove, 然后添加进set中的person实例也不需要担心其中属性的修改. 一切都会被托管持久化到数据库中.
+之后我就可以像使用list类似操作personset进行add/remove(Insert/Delete), 然后添加进set中的person实例也不需要担心其中属性的修改. 一切都会被托管持久化到数据库中.
 
 如同无须调用EF的DbContext.SaveChange()就能save changes一样简单.
 
-详见工程内Test目录
+详见Sample
