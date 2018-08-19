@@ -29,7 +29,7 @@ class Student
   razor.StartWork();
   var personset = razor.CreateDbSet<Student>(); 
   var student = new Student{Id = 1, Name="xxx"};
-  var student = personset.Insert(ref student);
+  personset.Insert(ref student);
   student.Name = "xxx2";
   //...  
   //do sth...
