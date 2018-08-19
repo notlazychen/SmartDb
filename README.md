@@ -28,13 +28,13 @@ class Student
   var razor = new Razor();    
   razor.StartWork();
   var personset = razor.CreateDbSet<Student>(); 
-  
-  var student = personset.Add(new Student{Id = 1, Name="xxx"});
+  var student = new Student{Id = 1, Name="xxx"};
+  var student = personset.Insert(ref student);
   student.Name = "xxx2";
   //...  
   //do sth...
   
-  razor.StopWork();
+  razor.StopWork();//结束写入线程
 ```
 
 之后我就可以像使用list一样操作personset进行add/remove, 然后添加进set中的person实例也不需要担心其中属性的修改. 一切都会被托管持久化到数据库中.
