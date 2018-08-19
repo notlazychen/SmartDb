@@ -107,11 +107,11 @@ namespace SmartDb
                     throw ex;
                 }
 
+                string sql = sb.ToString();
                 try
                 {
                     var cmd = _connWriter.CreateCommand();
                     cmd.Transaction = trx;
-                    string sql = sb.ToString();
                     cmd.CommandText = sql;
                     SqlCommandExecuting?.Invoke(sql);
                     cmd.ExecuteNonQuery();
@@ -120,7 +120,7 @@ namespace SmartDb
                 catch (Exception ex)
                 {
                     trx.Rollback();
-                    UnHandledSqlCommandExecuteException?.Invoke(this, ex);
+                    UnHandledSqlCommandExecuteException?.Invoke(this, new Exception($"{ex.Message}\n{sql}" ,ex));
                 }
                 finally
                 {
