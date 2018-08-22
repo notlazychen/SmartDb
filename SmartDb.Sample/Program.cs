@@ -13,8 +13,7 @@ namespace SmartDb.Sample
         {
             var date = TimeSpan.FromDays(3);
             string str = date.ToString(@"hh\:mm\:ss");
-            //string connstr = "Server=localhost;database=test;uid=root;pwd=root;SslMode=None;charset=utf8;pooling=false";
-            string connstr = "Server=140.143.28.95;database=db-test;uid=chenrong;pwd=abcd1234;SslMode=None;charset=utf8;pooling=false";
+            string connstr = "Server=localhost;database=test;uid=root;pwd=root;SslMode=None;charset=utf8;pooling=false";            
             razor = new Razor(connstr, 2000);
             //razor.Preload("XX.Domain");
             razor.SqlCommandExecuted += Razor_SqlCommandExecuted;
